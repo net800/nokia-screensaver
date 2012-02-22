@@ -1,9 +1,3 @@
-#-------------------------------------------------
-#
-# Project created by QtCreator 2011-06-07T14:09:50
-#
-#-------------------------------------------------
-
 QT       -= gui
 
 TARGET = screensaver
@@ -24,10 +18,12 @@ symbian: {
     pluginrsc = "SOURCEPATH ."\
       "START RESOURCE screensaver.rss" \
       "END"
-    
+
     MMP_RULES += pluginrsc
 
-    LIBS += -lapgrfx -lecom -lcone -leikcore -lgdi -leuser -lefsrv
+    LIBS += -lapgrfx -lecom -lcone -leikcore -lgdi
+# -leuser
+# -lefsrv
 # -lws32
 # -lavkon -lecam
 # -legul
@@ -44,4 +40,4 @@ symbian: {
     deployRsc = "\"$${EPOCROOT}epoc32/data/screensaver.rsc\" - \"!:/resource/plugins/screensaver.rsc\""
     addFiles.pkg_postrules += deployRsc
     DEPLOYMENT += addFiles
-}    
+}

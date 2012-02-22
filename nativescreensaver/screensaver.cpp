@@ -15,17 +15,6 @@ _LIT(KFontName, "Nokia Sans S60");
 CLaunchSaver::CLaunchSaver()
 {
     CWsScreenDevice* sd = CEikonEnv::Static()->ScreenDevice();
-/*
-    TInt mode = sd->CurrentScreenMode();
-    TPixelsAndRotation sr;
-    sd->GetScreenModeSizeAndRotation(mode, sr);
-    sr.iPixelSize.iHeight = 360;
-    sr.iPixelSize.iWidth = 640;
-    sr.iRotation = CFbsBitGc::EGraphicsOrientationRotated90;
-    sd->SetScreenSizeAndRotation(sr);
-    */
-
-    //sd->SetAppScreenMode(1);
 
     const CFont* baseFont = CEikonEnv::Static()->NormalFont();
     TFontSpec spec = baseFont->FontSpecInTwips();
@@ -60,19 +49,20 @@ CLaunchSaver::~CLaunchSaver()
 
 CLaunchSaver* CLaunchSaver::NewL()
 {
-    CLaunchSaver* self = new ( ELeave ) CLaunchSaver();
+    CLaunchSaver* self = new (ELeave)CLaunchSaver();
     return self;
 }
 
-CLaunchSaver* CLaunchSaver::NewLC() {
-    CLaunchSaver* self = new (ELeave) CLaunchSaver;
+CLaunchSaver* CLaunchSaver::NewLC()
+{
+    CLaunchSaver* self = new (ELeave)CLaunchSaver;
     CleanupStack::PushL(self);
     self->ConstructL();
     return self;
 }
 
-void CLaunchSaver::ConstructL() {
-}
+void CLaunchSaver::ConstructL()
+{}
 
 TInt CLaunchSaver::InitializeL( MScreensaverPluginHost* aHost )
 {
@@ -86,57 +76,68 @@ TInt CLaunchSaver::InitializeL( MScreensaverPluginHost* aHost )
 
 void CLaunchSaver::DrawIndicators(CWindowGc& gc, int x, int y)
 {
-    TIndicatorPayload msg;
-    if (iHost->GetIndicatorPayload(EScreensaverIndicatorIndexNewMessages, msg) == KErrNone) {
-        if (msg.iIsDisplayed > 0 && msg.iInteger > 0)
-        {
-            /*
-            CFbsBitmap* bmp = msg.iIcon->Bitmap();
-            gc.DrawBitmap(TPoint(10, 100), bmp);
-            */
-            gc.DrawRect(TRect(TPoint(x, y), TSize(14,10)));
-            gc.DrawLine(TPoint(x, y), TPoint(x + 7, y + 5));
-            gc.DrawLineTo(TPoint(x + 14, y));
-            x += 14;
-            if (msg.iInteger > 0)
-            {
-                TBuf<5> buf;
+    const TInt KIconWidth = 14;
+    const TInt KIconHeight = 10;
+    const TInt KGap = 10;
+    const TInt KSpace = 5;
 
-                buf.AppendNum(msg.iInteger);
+    TBuf<5> nMessages;
+    TBuf<5> nMissedCalls;
 
-                gc.UseFont(notifyFont);
-                x += 6;
-                gc.DrawText(buf, TPoint(x, y + notifyFont->AscentInPixels()));
-                x += notifyFont->TextWidthInPixels(buf);
-            }
-        }
+    TInt fullWidth = 0;
+    TIndicatorPayload payload;
+    if ((iHost->GetIndicatorPayload(EScreensaverIndicatorIndexNewMessages, payload) == KErrNone)
+            /*&& payload.iIsDisplayed > 0*/ && payload.iInteger > 0)
+    {
+        nMessages.AppendNum(payload.iInteger);
+        fullWidth += notifyFont->TextWidthInPixels(nMessages) + KIconWidth + KSpace;
     }
 
-    if (iHost->GetIndicatorPayload(EScreensaverIndicatorIndexNewMissedCalls, msg) == KErrNone) {
-        if (msg.iIsDisplayed > 0 && msg.iInteger > 0)
-        {
-            /*
-            CFbsBitmap* bmp = msg.iIcon->Bitmap();
-            gc.BitBlt(TPoint(10, 100), bmp);
-            */
-            x += 10;
+    if ((iHost->GetIndicatorPayload(EScreensaverIndicatorIndexNewMissedCalls, payload) == KErrNone)
+            /*&& payload.iIsDisplayed > 0*/ && payload.iInteger > 0)
+    {
+        nMissedCalls.AppendNum(payload.iInteger);
+        fullWidth += notifyFont->TextWidthInPixels(nMissedCalls) + KIconWidth + KSpace;
+    }
 
-            gc.SetPenSize(TSize(2, 2));
-            gc.DrawLine(TPoint(x + 12, y + 5), TPoint(x + 12, y));
-            gc.DrawLineTo(TPoint(x, y));
-            gc.DrawLineTo(TPoint(x, y + 5));
-            gc.SetPenSize(TSize(1, 1));
-            x += 14;
+    if (nMessages.Length() * nMissedCalls.Length() > 0)
+        fullWidth += KGap;
 
-            if (msg.iInteger > 0)
-            {
-                TBuf<5> buf;
-                buf.AppendNum(msg.iInteger);
-                gc.UseFont(notifyFont);
-                x += 6;
-                gc.DrawText(buf, TPoint(x, y + notifyFont->AscentInPixels()));
-            }
-        }
+    x = (screenRect.Width() - fullWidth)/2;
+
+    gc.UseFont(notifyFont);
+
+    if (nMessages.Length() > 0)
+    {
+        gc.DrawText(nMessages, TPoint(x, y + notifyFont->AscentInPixels()));
+        x += notifyFont->TextWidthInPixels(nMessages) + KSpace;
+
+        //CFbsBitmap* bmp = msg.iIcon->Bitmap();
+        //gc.DrawBitmap(TPoint(10, 100), bmp);
+
+        gc.DrawRect(TRect(TPoint(x, y), TSize(KIconWidth, KIconHeight)));
+        gc.DrawLine(TPoint(x, y), TPoint(x + KIconWidth/2, y + KIconHeight/2));
+        gc.DrawLineTo(TPoint(x + KIconWidth, y));
+        x += KIconWidth;
+
+        x += KGap;
+    }
+
+    if (nMissedCalls.Length() > 0)
+    {
+        gc.DrawText(nMissedCalls, TPoint(x, y + notifyFont->AscentInPixels()));
+        x += notifyFont->TextWidthInPixels(nMissedCalls) + KSpace;
+
+        //CFbsBitmap* bmp = msg.iIcon->Bitmap();
+        //gc.BitBlt(TPoint(10, 100), bmp);
+
+        const int KPenSize = 2;
+        gc.SetPenSize(TSize(KPenSize, KPenSize));
+        gc.DrawLine(TPoint(x + KIconWidth - KPenSize, y + 5), TPoint(x + KIconWidth - KPenSize, y));
+        gc.DrawLineTo(TPoint(x, y));
+        gc.DrawLineTo(TPoint(x, y + KIconHeight/2));
+        gc.SetPenSize(TSize(1, 1));
+        x += KIconWidth;
     }
 }
 
@@ -150,7 +151,7 @@ TInt CLaunchSaver::Draw(CWindowGc& gc)
     gc.SetBrushColor(KRgbBlack);
     TTime now; now.HomeTime();
 
-    TBuf<50> timeString;
+    TBuf<20> timeString;
     _LIT(KOwnTimeFormat,"%:0%H%:1%T");
     //_LIT(KOwnTimeFormat,"%:0%H%:1%T%:2%S.%*C3%:3");
     now.FormatL(timeString, KOwnTimeFormat);
@@ -159,8 +160,8 @@ TInt CLaunchSaver::Draw(CWindowGc& gc)
     TInt yPos = ((now.DateTime().Hour()*60. + now.DateTime().Minute())/1439)
             * (screenRect.Height() / 2 - KTopMargin - KBottomMargin) + timeFont->AscentInPixels() + KTopMargin;
 
-    TBuf<50> dateString;
-    _LIT(KOwnDateFormat,"%F%*E %D/%M/%Y");
+    TBuf<20> dateString;
+    _LIT(KOwnDateFormat,"%F%*E %D/%M/%*Y");
     now.FormatL(dateString, KOwnDateFormat);
     TInt xPosDate = (screenRect.Width() - dateFont->TextWidthInPixels(dateString)) / 2;
     TInt yPosDate = yPos + dateFont->AscentInPixels() + KGap;
@@ -173,7 +174,7 @@ TInt CLaunchSaver::Draw(CWindowGc& gc)
         gc.DrawText(dateString, TPoint(xPosDate, yPosDate));
     }
 
-    DrawIndicators(gc, xPosDate, yPosDate + 10);
+    DrawIndicators(gc, xPosDate, yPosDate + 14);
 
     UpdateRefreshTimer();
 
@@ -192,36 +193,36 @@ const TDesC16& CLaunchSaver::Name() const
     return KSaverName;
 }
 
-TInt CLaunchSaver::HandleScreensaverEventL( TScreensaverEvent aEvent, TAny* /*aData*/ )
+TInt CLaunchSaver::HandleScreensaverEventL(TScreensaverEvent event, TAny* /*aData*/)
 {
     TInt err(KErrNone);
-    switch (aEvent)
+    switch (event)
     {
-    case EScreensaverEventTimeout:
-    {
-        // Keep lights on
-        iHost->RequestTimeout( KLightsOnTimeoutInterval );
+        case EScreensaverEventTimeout:
+        {
+            // Keep lights on
+            iHost->RequestTimeout( KLightsOnTimeoutInterval );
 
-        UpdateRefreshTimer();
-        break;
-    }
-    case EScreensaverEventStarting:
-    {
-        // Switch to partial mode to save power
-        TScreensaverPartialMode partial;
-        partial.iType = EPartialModeTypeMostPowerSaving;
-        partial.iBpp = 0;
-        TInt height = CEikonEnv::Static()->ScreenDevice()->SizeInPixels().iHeight;
-        iHost->SetActiveDisplayArea(KTopMargin, height - KBottomMargin, partial);
+            UpdateRefreshTimer();
+            break;
+        }
+        case EScreensaverEventStarting:
+        {
+            // Switch to partial mode to save power
+            TScreensaverPartialMode partial;
+            partial.iType = EPartialModeTypeMostPowerSaving;
+            partial.iBpp = 0;
+            TInt height = CEikonEnv::Static()->ScreenDevice()->SizeInPixels().iHeight;
+            iHost->SetActiveDisplayArea(KTopMargin, height - KBottomMargin, partial);
 
-        iHost->RequestTimeout(KLightsOnTimeoutInterval);
-        break;
+            iHost->RequestTimeout(KLightsOnTimeoutInterval);
+            break;
+        }
+        default:
+        {
+            break;
+        }
     }
-    default:
-    {
-        break;
-    }
-    } // switch ( aEvent )
 
     return err;
 }
