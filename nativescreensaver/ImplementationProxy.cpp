@@ -4,7 +4,7 @@
 
 // Define the interface implementors
 const TImplementationProxy ImplementationTable[] =  {
-        { {SCREENSAVER_UID3 }, ( TProxyNewLPtr )CLaunchSaver::NewL}
+        { {SCREENSAVER_UID3 }, ( TProxyNewLPtr )CScreenSaver::NewL}
     };
 
 /*

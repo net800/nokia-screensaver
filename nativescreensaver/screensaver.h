@@ -2,13 +2,14 @@
 #define SSAVER_H
 
 #include <screensaverpluginintdef.h>
+#include <sensrvdatalistener.h>
 
-class CLaunchSaver : public CScreensaverPluginInterfaceDefinition
+class CScreenSaver : public CScreensaverPluginInterfaceDefinition, MSensrvDataListener
 {
 public:
-    static CLaunchSaver* NewL();
-
-    ~CLaunchSaver();
+    static CScreenSaver* NewL();
+    static CScreenSaver* NewLC();
+    ~CScreenSaver();
 
 public: // From MScreensaverPlugin
     virtual TInt InitializeL(MScreensaverPluginHost* aHost);
@@ -18,19 +19,28 @@ public: // From MScreensaverPlugin
     virtual TInt Capabilities() { return EScpCapsNone; }
     virtual TInt PluginFunction(TScPluginCaps /*aFunction*/, TAny* /*aParam*/) { return KErrNone; }
 
+    void SetVisible(TBool visible);
+
+    void DataReceived(CSensrvChannel &aChannel, TInt aCount, TInt aDataLost);
+    void DataError(CSensrvChannel &aChannel, TSensrvErrorSeverity aError);
+    void GetDataListenerInterfaceL(TUid aInterfaceUid, TAny *&aInterface) {}
 private:
-    CLaunchSaver();
-    static CLaunchSaver* NewLC();
+    CScreenSaver();
     void ConstructL();
-    void DrawIndicators(CWindowGc& gc, int x, int y);
+    void DrawIndicators(CWindowGc& gc, TInt x, TInt y);
     void UpdateRefreshTimer();
+    void StartSensorL();
+    void StopSensor();
 
 private: // Data
-    MScreensaverPluginHost *iHost;
-    TRect screenRect;
-    CFont* timeFont;
-    CFont* dateFont;
-    CFont* notifyFont;
+    TBool _isVisible;
+    TBool _isListening;
+    MScreensaverPluginHost *_host;
+    CSensrvChannel* _proximitySensor;
+    TRect _screenRect;
+    CFont* _timeFont;
+    CFont* _dateFont;
+    CFont* _notifyFont;
 };
 
 #endif

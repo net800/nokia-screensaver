@@ -21,7 +21,7 @@ symbian: {
 
     MMP_RULES += pluginrsc
 
-    LIBS += -lapgrfx -lecom -lcone -leikcore -lgdi
+    LIBS += -lapgrfx -lecom -lcone -leikcore -lgdi -lSensrvClient -lsensrvutil
 # -leuser
 # -lefsrv
 # -lws32
