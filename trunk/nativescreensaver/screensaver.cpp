@@ -6,14 +6,22 @@
 #include "screensaver.h"
 #include "screensaver.hrh"
 
+#define SCREENSAVER_EXTRA_FEATURES
+
 const TInt KLightsOnTimeoutInterval = 30*60 + 30;//30.5 min
 const TInt KOneSecond = 1000000;
 const TInt KTopMargin = 20;
 const TInt KBottomMargin = 20;
 const TInt KGap = 40;
-const TBool KUseSensor = true;
 
-_LIT(KSaverName, "Native Screensaver");
+#ifdef SCREENSAVER_EXTRA_FEATURES
+_LIT(KSaverName, "Anna Screensaver+");
+const TBool KUseSensor = true;
+#else
+_LIT(KSaverName, "Anna Screensaver");
+const TBool KUseSensor = false;
+#endif
+
 _LIT(KFontName, "Nokia Sans S60");
 
 CScreenSaver::CScreenSaver()
@@ -53,7 +61,8 @@ CScreenSaver::~CScreenSaver()
     CEikonEnv::Static()->ScreenDevice()->ReleaseFont(_timeFont);
     CEikonEnv::Static()->ScreenDevice()->ReleaseFont(_dateFont);
     CEikonEnv::Static()->ScreenDevice()->ReleaseFont(_notifyFont);
-    CSensrvChannel::Delete(_proximitySensor);
+    if (_proximitySensor != NULL)
+        CSensrvChannel::Delete(_proximitySensor);
 }
 
 CScreenSaver* CScreenSaver::NewLC()
