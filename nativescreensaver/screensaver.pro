@@ -16,7 +16,7 @@ symbian: {
 
     OTHER_FILES += \
         screensaver.rss \
-        eabi/screensaveru.def
+        eabi/annascreensaveru.def
 
     pluginrsc = "SOURCEPATH ."\
       "START RESOURCE screensaver.rss" \
@@ -24,12 +24,8 @@ symbian: {
 
     MMP_RULES += pluginrsc
 
-    LIBS += -lapgrfx -lecom -lcone -leikcore -lgdi -lSensrvClient -lsensrvutil
-# -leuser
-# -lefsrv
-# -lws32
-# -lavkon -lecam
-# -legul
+    LIBS += -lecom -lcone -lgdi -lSensrvClient -lsensrvutil -lavkon -leiksrv
+    #-leikcore -lapgrfx
 
     TARGET.UID2 = 0x10009D8D
     TARGET.UID3 = 0x20060C5D # SCREENSAVER_UID3
