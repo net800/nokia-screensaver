@@ -11,9 +11,11 @@
 
 const TInt KLightsOnTimeoutInterval = 30*60 + 30;//30.5 min
 const TInt KOneSecond = 1000000;
+
 const TInt KTopMargin = 20;
 const TInt KBottomMargin = 20;
-const TInt KGap = 40;
+const TInt KTimeDateGap = 40;
+_LIT(KFontName, "Nokia Sans S60");
 
 #ifdef SCREENSAVER_EXTRA_FEATURES
 _LIT(KSaverName, "Anna Screensaver+");
@@ -25,7 +27,36 @@ const TBool KUseSensor = false;
 const CAknAppUi::TAppUiOrientation KOrientation = CAknAppUi::EAppUiOrientationPortrait;
 #endif
 
-_LIT(KFontName, "Nokia Sans S60");
+void SetOrientationL(CAknAppUi::TAppUiOrientation orientation)
+{
+    CAknAppUi* appUi = dynamic_cast<CAknAppUi*>(CEikonEnv::Static()->AppUi());
+    if (appUi)
+        appUi->SetOrientationL(orientation);
+}
+
+CSensrvChannel* CreateSensorL()
+{
+    CSensrvChannel* result = NULL;
+    CSensrvChannelFinder* channelFinder = CSensrvChannelFinder::NewL();
+    CleanupStack::PushL(channelFinder);
+
+    RSensrvChannelInfoList channelInfoList;
+    CleanupClosePushL(channelInfoList);
+    TSensrvChannelInfo channelInfo;
+    channelInfo.iChannelType = KSensrvChannelTypeIdProximityMonitor;
+    channelFinder->FindChannelsL(channelInfoList, channelInfo);
+
+    if(channelInfoList.Count() >= 1)
+    {
+        TSensrvChannelInfo inf = channelInfoList[0];
+        result = CSensrvChannel::NewL(inf);
+    }
+
+    CleanupStack::PopAndDestroy();
+    CleanupStack::PopAndDestroy(channelFinder);
+
+    return result;
+}
 
 CScreenSaver::CScreenSaver()
 {
@@ -33,7 +64,6 @@ CScreenSaver::CScreenSaver()
     _isListening = false;
     _isVisible = true;
 
-    //todo: move to InitializeL ?
     CWsScreenDevice* sd = CEikonEnv::Static()->ScreenDevice();
 
     const CFont* baseFont = CEikonEnv::Static()->NormalFont();
@@ -50,7 +80,7 @@ CScreenSaver::CScreenSaver()
 
     spec.iHeight = 40 * KTwipsPerPoint;
     spec.iFontStyle.SetStrokeWeight(EStrokeWeightBold);
-    spec.iFontStyle.SetEffects(FontEffect::EOutline, true);
+    spec.iFontStyle.SetEffects(FontEffect::EOutline, ETrue);
 
     sd->GetNearestFontToDesignHeightInTwips(_timeFont, spec);
 }
@@ -60,8 +90,7 @@ CScreenSaver::~CScreenSaver()
     CEikonEnv::Static()->ScreenDevice()->ReleaseFont(_timeFont);
     CEikonEnv::Static()->ScreenDevice()->ReleaseFont(_dateFont);
     CEikonEnv::Static()->ScreenDevice()->ReleaseFont(_notifyFont);
-    if (_proximitySensor != NULL)
-        CSensrvChannel::Delete(_proximitySensor);
+    delete _proximitySensor;
 }
 
 CScreenSaver* CScreenSaver::NewLC()
@@ -81,32 +110,10 @@ CScreenSaver* CScreenSaver::NewL()
 
 void CScreenSaver::ConstructL()
 {
-    //todo: move to InitializeL ?
     if (KUseSensor)
-    {
-        CSensrvChannelFinder* channelFinder = CSensrvChannelFinder::NewL();
-        CleanupStack::PushL(channelFinder);
+        _proximitySensor = CreateSensorL();
 
-        RSensrvChannelInfoList channelInfoList;
-        CleanupClosePushL(channelInfoList);
-        TSensrvChannelInfo channelInfo;
-        channelInfo.iChannelType = KSensrvChannelTypeIdProximityMonitor;
-        channelFinder->FindChannelsL(channelInfoList, channelInfo);
-
-        if(channelInfoList.Count() >= 1)
-        {
-            TSensrvChannelInfo inf = channelInfoList[0];
-            _proximitySensor = CSensrvChannel::NewL(inf);
-        }
-
-        CleanupStack::PopAndDestroy();
-        CleanupStack::PopAndDestroy(channelFinder);
-    }
-
-
-    CAknAppUi* appUi = dynamic_cast<CAknAppUi*>(CEikonEnv::Static()->AppUi());
-    if (appUi && appUi->Orientation() != KOrientation)
-        TRAP_IGNORE(appUi->SetOrientationL(KOrientation));
+    SetOrientationL(KOrientation);
 }
 
 TInt CScreenSaver::InitializeL(MScreensaverPluginHost* aHost)
@@ -136,13 +143,14 @@ void CScreenSaver::DataReceived(CSensrvChannel &aChannel, TInt /*aCount*/, TInt 
         TPckg<TSensrvProximityData> package(data);
         aChannel.GetData(package);
 
-        switch (data.iProximityState) {
+        switch (data.iProximityState)
+        {
             case TSensrvProximityData::EProximityDiscernible:
-                SetVisible(false);
+                SetVisible(EFalse);
                 break;
             case TSensrvProximityData::EProximityIndiscernible:
                 StopSensor();
-                SetVisible(true);
+                SetVisible(ETrue);
                 break;
         }
     }
@@ -153,6 +161,7 @@ void CScreenSaver::DataError(CSensrvChannel &aChannel, TSensrvErrorSeverity aErr
     if (&aChannel == _proximitySensor && aError == ESensrvErrorSeverityFatal)
     {
         _isListening = false;
+        delete _proximitySensor;
         _proximitySensor = NULL;
     }
 }
@@ -240,28 +249,28 @@ TInt CScreenSaver::Draw(CWindowGc& gc)
     TTime now; now.HomeTime();
 
     TBuf<20> timeString;
-    _LIT(KOwnTimeFormat,"%:0%H%:1%T");
-    //_LIT(KOwnTimeFormat,"%:0%H%:1%T%:2%S.%*C3%:3");
-    now.FormatL(timeString, KOwnTimeFormat);
+    _LIT(KTimeFormat,"%:0%H%:1%T");
+    //_LIT(KTimeFormat,"%:0%H%:1%T%:2%S.%*C3%:3");
+    now.FormatL(timeString, KTimeFormat);
 
     TInt xPos = (_screenRect.Width() - _timeFont->TextWidthInPixels(timeString)) / 2;
     TInt yPos = ((now.DateTime().Hour()*60. + now.DateTime().Minute())/1439)
             * (_screenRect.Height() / 2 - KTopMargin - KBottomMargin) + _timeFont->AscentInPixels() + KTopMargin;
 
     TBuf<20> dateString;
-    _LIT(KOwnDateFormat,"%F%*E %D/%M/%*Y");
-    now.FormatL(dateString, KOwnDateFormat);
+    _LIT(KDateFormat,"%F%*E %D/%M/%*Y");
+    now.FormatL(dateString, KDateFormat);
     TInt xPosDate = (_screenRect.Width() - _dateFont->TextWidthInPixels(dateString)) / 2;
-    TInt yPosDate = yPos + _dateFont->AscentInPixels() + KGap;
+    TInt yPosDate = yPos + _dateFont->AscentInPixels() + KTimeDateGap;
 
     for (int i = 0; i < 2; i++)
     {
         gc.UseFont(_timeFont);
         gc.DrawText(timeString, TPoint(xPos, yPos));
-
-        gc.UseFont(_dateFont);
-        gc.DrawText(dateString, TPoint(xPosDate, yPosDate));
     }
+
+    gc.UseFont(_dateFont);
+    gc.DrawText(dateString, TPoint(xPosDate, yPosDate));
 
     DrawIndicators(gc, xPosDate, yPosDate + 14);
 
@@ -277,7 +286,7 @@ void CScreenSaver::StartSensorL()
     {
         _proximitySensor->OpenChannelL();
         _proximitySensor->StartDataListeningL(this, 1, 1, 0);
-        _isListening = true;
+        _isListening = ETrue;
     }
 }
 
@@ -337,15 +346,11 @@ TInt CScreenSaver::HandleScreensaverEventL(TScreensaverEvent event, TAny* /*aDat
             displayInfo.iSize = sizeof(TScreensaverDisplayInfo);
             User::LeaveIfError(_host->DisplayInfo(&displayInfo));
             _screenRect = displayInfo.iRect;
-
             break;
         }
         case EScreensaverEventStopping:
         {
             StopSensor();
-        }
-        default:
-        {
             break;
         }
     }
