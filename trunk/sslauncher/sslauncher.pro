@@ -29,7 +29,7 @@ symbian: {
     LIBS += -lapgrfx -lecom -lcone
 
     TARGET.UID2 = 0x10009D8D
-    TARGET.UID3 = 0x2004201F # SSLAUNCHER_UID3
+    TARGET.UID3 = 0x20060C5E # SSLAUNCHER_UID3
     TARGET.CAPABILITY = NetworkServices LocalServices Location ReadUserData WriteUserData ReadDeviceData WriteDeviceData SwEvent UserEnvironment PowerMgmt
     # additional capabilities required by Symbian Anna
     # TARGET.CAPABILITY += CommDD MultimediaDD TrustedUI ProtServ DiskAdmin NetworkControl SurroundingsDD

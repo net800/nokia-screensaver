@@ -15,7 +15,7 @@ qtcAddDeployment()
 RESOURCES += qtscreensaver.qrc
 
 symbian: {
-    TARGET.UID3 = 0x2004201C
+    TARGET.UID3 = 0x20060C5F
 
     TARGET.CAPABILITY += NetworkServices SwEvent UserEnvironment
 

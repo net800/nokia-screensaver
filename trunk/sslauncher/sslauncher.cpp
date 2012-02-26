@@ -13,7 +13,8 @@
 const TUid KUidSaverExe = TUid::Uid( SSAVER_UID3 );
 const TInt KLightsOnTimeoutInterval = 30;
 
-_LIT( KSaverName, "Qt Screensaver" );
+_LIT( KSaverName, "Screensaver" );
+TBuf<KMaxUidName + 20> FullName;
 
 /** 
  * This class implements Symbian screensaver plugin using ECOM plugin interface.
@@ -34,102 +35,106 @@ _LIT( KSaverName, "Qt Screensaver" );
 
 // Define the interface implementors
 const TImplementationProxy ImplementationTable[] =  {
-        { {SSLAUNCHER_UID3 }, ( TProxyNewLPtr )CLaunchSaver::NewL}
-    };
+    { {SSLAUNCHER_UID3 }, ( TProxyNewLPtr )CLaunchSaver::NewL}
+};
 
 EXPORT_C const TImplementationProxy* ImplementationGroupProxy( TInt& aTableCount )
-    {
+{
     aTableCount = sizeof( ImplementationTable ) / sizeof( TImplementationProxy );
     return ImplementationTable;
-    }
+}
 
 CLaunchSaver* CLaunchSaver::NewL()
-    {
+{
     CLaunchSaver* self = new ( ELeave ) CLaunchSaver();
     return self;
-    }
+}
 
 TInt CLaunchSaver::InitializeL( MScreensaverPluginHost* aHost )
-    {
+{
     iHost = aHost;
     return KErrNone;
-    }
+}
 
 TInt CLaunchSaver::Draw( CWindowGc& aGc )
-    {
+{
     // Do nothing, separate process does the visuals
     return KErrNone;
-    }
+}
 
 const TDesC16& CLaunchSaver::Name() const
+{
+    if (FullName.Length() == 0)
     {
-    return KSaverName;
+        FullName.Append(KSaverName);
+        FullName.Append(' ');
+        FullName.Append(KUidSaverExe.Name());
     }
+    return FullName;
+}
 
-TInt CLaunchSaver::HandleScreensaverEventL( TScreensaverEvent aEvent,
-                                            TAny* /*aData*/ )
-    {
+TInt CLaunchSaver::HandleScreensaverEventL( TScreensaverEvent aEvent, TAny* /*aData*/ )
+{
     TInt err( KErrNone );
     
     switch ( aEvent )
-        {
+    {
         case EScreensaverEventTimeout:
-            {
+        {
             // Keep lights on
             iHost->RequestTimeout( KLightsOnTimeoutInterval );
             break;
-            }
+        }
         case EScreensaverEventStarting:
-            {
+        {
             // Launch new process
             RApaLsSession apaLsSession;
             TInt err = apaLsSession.Connect();
             
             if ( err == KErrNone )
-                {
+            {
                 TThreadId thread;
                 err = apaLsSession.StartDocument( KNullDesC, KUidSaverExe, thread );
                 apaLsSession.Close();
-                }
+            }
 
             // Switch to partial mode to save power
             TScreensaverPartialMode partial;
             partial.iType = EPartialModeTypeMostPowerSaving;
 
-            // Set partial mode for almost the whole screen
-            // (doesn't go to partial mode if whole screen is specified)
             TInt height = CEikonEnv::Static()->ScreenDevice()->SizeInPixels().iHeight;
-            iHost->SetActiveDisplayArea( 0, height - 1, partial );
+            TInt width = CEikonEnv::Static()->ScreenDevice()->SizeInPixels().iWidth;
+            TInt lastRow = Max(height, width) - 1;
+            iHost->SetActiveDisplayArea(0, lastRow, partial);
 
             if( err == KErrNone )
-                {
+            {
                 iHost->RequestTimeout( KLightsOnTimeoutInterval );
-                }
+            }
             
             break;
-            }
+        }
         case EScreensaverEventStopping:
-            {
+        {
             // Kill saver process
             TApaTaskList list( CEikonEnv::Static()->WsSession() );
             TApaTask task = list.FindApp( KUidSaverExe );
 
             if ( task.Exists() )
-                {
-                task.EndTask();
-                }
-        
-            break;
-            }
-        default:
             {
-            break;
+                task.EndTask();
             }
-        } // switch ( aEvent )
-        
+            break;
+        }
+        default:
+        {
+            break;
+        }
+    } // switch ( aEvent )
+
     return err;
-    }
+}
 
 CLaunchSaver::CLaunchSaver()
-    {
-    }
+{
+}
