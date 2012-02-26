@@ -107,7 +107,7 @@ Rectangle {
             clocktimer.interval = 1000*(60 - date.getSeconds()) - date.getMilliseconds();
             sensor.active = true;
 
-            newMessagesText.text = mm.count;
+            //newMessagesText.text = mm.count;
         }
     }
 }
