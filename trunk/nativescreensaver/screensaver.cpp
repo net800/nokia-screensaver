@@ -18,12 +18,12 @@ const TInt KTimeDateGap = 40;
 _LIT(KFontName, "Nokia Sans S60");
 
 #ifdef SCREENSAVER_EXTRA_FEATURES
+const TBool KUseSensor = true; //Beware: on AMOLED-screen devices proximity sensor might consume more power than the sceeen!
 _LIT(KSaverName, "Anna Screensaver+");
-const TBool KUseSensor = true;
 const CAknAppUi::TAppUiOrientation KOrientation = CAknAppUi::EAppUiOrientationAutomatic;
 #else
-_LIT(KSaverName, "Anna Screensaver");
 const TBool KUseSensor = false;
+_LIT(KSaverName, "Anna Screensaver");
 const CAknAppUi::TAppUiOrientation KOrientation = CAknAppUi::EAppUiOrientationPortrait;
 #endif
 
@@ -238,7 +238,7 @@ TInt CScreenSaver::Draw(CWindowGc& gc)
     gc.Clear();
     if (!_isVisible)
     {
-        //_host->SetRefreshTimerValue(0); //disable timer? test this or UseRefreshTimer
+        _host->SetRefreshTimerValue(0); //disable timer
         return KErrNone;
     }
     gc.SetBrushStyle(CGraphicsContext::ESolidBrush);
@@ -285,7 +285,7 @@ void CScreenSaver::StartSensorL()
     if (!_isListening && _proximitySensor != NULL)
     {
         _proximitySensor->OpenChannelL();
-        _proximitySensor->StartDataListeningL(this, 1, 1, 0);
+        _proximitySensor->StartDataListeningL(this, 1, 0, 0);
         _isListening = ETrue;
     }
 }
