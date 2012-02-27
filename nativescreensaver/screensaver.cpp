@@ -258,14 +258,14 @@ TInt CScreenSaver::Draw(CWindowGc& gc)
             * (_screenRect.Height() / 2 - KTopMargin - KBottomMargin) + _timeFont->AscentInPixels() + KTopMargin;
 
     TBuf<20> dateString;
-    _LIT(KDateFormat,"%F%*E %D/%M/%*Y");
+    _LIT(KDateFormat,"%*E %/0%1%/1%2%/2%3%/3");
     now.FormatL(dateString, KDateFormat);
     TInt xPosDate = (_screenRect.Width() - _dateFont->TextWidthInPixels(dateString)) / 2;
     TInt yPosDate = yPos + _dateFont->AscentInPixels() + KTimeDateGap;
 
-    for (int i = 0; i < 2; i++)
+    gc.UseFont(_timeFont);
+    for (int i = 0; i < 2; i++) //magic
     {
-        gc.UseFont(_timeFont);
         gc.DrawText(timeString, TPoint(xPos, yPos));
     }
 
@@ -357,4 +357,3 @@ TInt CScreenSaver::HandleScreensaverEventL(TScreensaverEvent event, TAny* /*aDat
 
     return err;
 }
-
