@@ -1,13 +1,8 @@
 #include <eikenv.h>
-#include <sensrvchannelfinder.h>
-#include <sensrvchannel.h>
-#include <sensrvproximitysensor.h>
-#include <AknAppUi.h>
 
 #include "screensaver.h"
 #include "screensaver.hrh"
 
-#define SCREENSAVER_EXTRA_FEATURES
 
 const TInt KLightsOnTimeoutInterval = 30*60 + 30;//30.5 min
 const TInt KOneSecond = 1000000;
@@ -15,61 +10,15 @@ const TInt KOneSecond = 1000000;
 const TInt KTopMargin = 20;
 const TInt KBottomMargin = 20;
 const TInt KTimeDateGap = 40;
-_LIT(KFontName, "Nokia Sans S60");
 
-#ifdef SCREENSAVER_EXTRA_FEATURES
-const TBool KUseSensor = true; //Beware: on AMOLED-screen devices proximity sensor might consume more power than the sceeen!
-_LIT(KSaverName, "Anna Screensaver+");
-const CAknAppUi::TAppUiOrientation KOrientation = CAknAppUi::EAppUiOrientationAutomatic;
-#else
-const TBool KUseSensor = false;
 _LIT(KSaverName, "Anna Screensaver");
-const CAknAppUi::TAppUiOrientation KOrientation = CAknAppUi::EAppUiOrientationPortrait;
-#endif
-
-void SetOrientationL(CAknAppUi::TAppUiOrientation orientation)
-{
-    CAknAppUi* appUi = dynamic_cast<CAknAppUi*>(CEikonEnv::Static()->AppUi());
-    if (appUi)
-        appUi->SetOrientationL(orientation);
-}
-
-CSensrvChannel* CreateSensorL()
-{
-    CSensrvChannel* result = NULL;
-    CSensrvChannelFinder* channelFinder = CSensrvChannelFinder::NewL();
-    CleanupStack::PushL(channelFinder);
-
-    RSensrvChannelInfoList channelInfoList;
-    CleanupClosePushL(channelInfoList);
-    TSensrvChannelInfo channelInfo;
-    channelInfo.iChannelType = KSensrvChannelTypeIdProximityMonitor;
-    channelFinder->FindChannelsL(channelInfoList, channelInfo);
-
-    if(channelInfoList.Count() >= 1)
-    {
-        TSensrvChannelInfo inf = channelInfoList[0];
-        result = CSensrvChannel::NewL(inf);
-    }
-
-    CleanupStack::PopAndDestroy();
-    CleanupStack::PopAndDestroy(channelFinder);
-
-    return result;
-}
 
 CScreenSaver::CScreenSaver()
 {
-    _proximitySensor = NULL;
-    _isListening = false;
-    _isVisible = true;
-
     CWsScreenDevice* sd = CEikonEnv::Static()->ScreenDevice();
 
     const CFont* baseFont = CEikonEnv::Static()->NormalFont();
     TFontSpec spec = baseFont->FontSpecInTwips();
-
-    spec.iTypeface.iName = KFontName;
 
     spec.iFontStyle.SetStrokeWeight(EStrokeWeightNormal);
     spec.iHeight = 4 * KTwipsPerPoint;
@@ -90,7 +39,6 @@ CScreenSaver::~CScreenSaver()
     CEikonEnv::Static()->ScreenDevice()->ReleaseFont(_timeFont);
     CEikonEnv::Static()->ScreenDevice()->ReleaseFont(_dateFont);
     CEikonEnv::Static()->ScreenDevice()->ReleaseFont(_notifyFont);
-    delete _proximitySensor;
 }
 
 CScreenSaver* CScreenSaver::NewLC()
@@ -110,10 +58,6 @@ CScreenSaver* CScreenSaver::NewL()
 
 void CScreenSaver::ConstructL()
 {
-    if (KUseSensor)
-        _proximitySensor = CreateSensorL();
-
-    SetOrientationL(KOrientation);
 }
 
 TInt CScreenSaver::InitializeL(MScreensaverPluginHost* aHost)
@@ -124,47 +68,6 @@ TInt CScreenSaver::InitializeL(MScreensaverPluginHost* aHost)
     //iHost->UseStandardIndicators();
 
     return KErrNone;
-}
-
-void CScreenSaver::SetVisible(TBool isVisible)
-{
-    if (_isVisible != isVisible)
-    {
-        _isVisible = isVisible;
-        _host->SetRefreshTimerValue(1);
-    }
-}
-
-void CScreenSaver::DataReceived(CSensrvChannel &aChannel, TInt /*aCount*/, TInt /*aDataLost*/)
-{
-    if (aChannel.GetChannelInfo().iChannelType == KSensrvChannelTypeIdProximityMonitor)
-    {
-        TSensrvProximityData data;
-        TPckg<TSensrvProximityData> package(data);
-        aChannel.GetData(package);
-
-        switch (data.iProximityState)
-        {
-            case TSensrvProximityData::EProximityDiscernible:
-                SetVisible(EFalse);
-                break;
-            case TSensrvProximityData::EProximityIndiscernible:
-                StopSensor();
-                SetVisible(ETrue);
-                break;
-        }
-    }
-}
-
-void CScreenSaver::DataError(CSensrvChannel &aChannel, TSensrvErrorSeverity aError)
-{
-    if (&aChannel == _proximitySensor && aError == ESensrvErrorSeverityFatal)
-    {
-        _isListening = false;
-        delete _proximitySensor;
-        _proximitySensor = NULL;
-        SetVisible(ETrue);
-    }
 }
 
 void CScreenSaver::DrawIndicators(CWindowGc& gc, TInt x, TInt y)
@@ -205,9 +108,6 @@ void CScreenSaver::DrawIndicators(CWindowGc& gc, TInt x, TInt y)
         gc.DrawText(nMessages, TPoint(x, y + _notifyFont->AscentInPixels()));
         x += _notifyFont->TextWidthInPixels(nMessages) + KSpace;
 
-        //CFbsBitmap* bmp = msg.iIcon->Bitmap();
-        //gc.DrawBitmap(TPoint(10, 100), bmp);
-
         gc.DrawRect(TRect(TPoint(x, y), TSize(KIconWidth, KIconHeight)));
         gc.DrawLine(TPoint(x, y), TPoint(x + KIconWidth/2, y + KIconHeight/2));
         gc.DrawLineTo(TPoint(x + KIconWidth, y));
@@ -220,9 +120,6 @@ void CScreenSaver::DrawIndicators(CWindowGc& gc, TInt x, TInt y)
     {
         gc.DrawText(nMissedCalls, TPoint(x, y + _notifyFont->AscentInPixels()));
         x += _notifyFont->TextWidthInPixels(nMissedCalls) + KSpace;
-
-        //CFbsBitmap* bmp = msg.iIcon->Bitmap();
-        //gc.BitBlt(TPoint(10, 100), bmp);
 
         const int KPenSize = 2;
         gc.SetPenSize(TSize(KPenSize, KPenSize));
@@ -237,11 +134,7 @@ void CScreenSaver::DrawIndicators(CWindowGc& gc, TInt x, TInt y)
 TInt CScreenSaver::Draw(CWindowGc& gc)
 {
     gc.Clear();
-    if (!_isVisible)
-    {
-        _host->SetRefreshTimerValue(0); //disable timer
-        return KErrNone;
-    }
+
     gc.SetBrushStyle(CGraphicsContext::ESolidBrush);
     gc.SetPenStyle(CGraphicsContext::ESolidPen);
 
@@ -251,7 +144,6 @@ TInt CScreenSaver::Draw(CWindowGc& gc)
 
     TBuf<20> timeString;
     _LIT(KTimeFormat,"%:0%J%:1%T");
-    //_LIT(KTimeFormat,"%:0%H%:1%T%:2%S.%*C3%:3");
     now.FormatL(timeString, KTimeFormat);
 
     TInt xPos = (_screenRect.Width() - _timeFont->TextWidthInPixels(timeString)) / 2;
@@ -276,29 +168,8 @@ TInt CScreenSaver::Draw(CWindowGc& gc)
     DrawIndicators(gc, xPosDate, yPosDate + 14);
 
     UpdateRefreshTimer();
-    TRAPD(err, StartSensorL());
 
-    return err;
-}
-
-void CScreenSaver::StartSensorL()
-{
-    if (!_isListening && _proximitySensor != NULL)
-    {
-        _proximitySensor->OpenChannelL();
-        _proximitySensor->StartDataListeningL(this, 1, 0, 0);
-        _isListening = ETrue;
-    }
-}
-
-void CScreenSaver::StopSensor()
-{
-    if (_isListening && _proximitySensor != NULL)
-    {
-        _proximitySensor->StopDataListening();
-        _proximitySensor->CloseChannel();
-        _isListening = false;
-    }
+    return KErrNone;
 }
 
 void CScreenSaver::UpdateRefreshTimer()
@@ -327,31 +198,14 @@ TInt CScreenSaver::HandleScreensaverEventL(TScreensaverEvent event, TAny* /*aDat
         }
         case EScreensaverEventStarting:
         {
-            _isVisible = true;
-
             TScreensaverPartialMode partial;
             partial.iType = EPartialModeTypeMostPowerSaving;
-            partial.iBpp = 0;
 
-            TInt height = CEikonEnv::Static()->ScreenDevice()->SizeInPixels().iHeight;
-            TInt width = CEikonEnv::Static()->ScreenDevice()->SizeInPixels().iWidth;
-            _host->SetActiveDisplayArea(KTopMargin, Max(width, height) - 1, partial);
+            _screenRect.SetHeight(CEikonEnv::Static()->ScreenDevice()->SizeInPixels().iHeight);
+            _screenRect.SetWidth(CEikonEnv::Static()->ScreenDevice()->SizeInPixels().iWidth);
+            _host->SetActiveDisplayArea(KTopMargin, Max(_screenRect.Width(), _screenRect.Height()) - 1, partial);
 
             _host->RequestTimeout(KLightsOnTimeoutInterval);
-            StartSensorL();
-            break;
-        }
-        case EScreensaverEventDisplayChanged:
-        {
-            TScreensaverDisplayInfo displayInfo;
-            displayInfo.iSize = sizeof(TScreensaverDisplayInfo);
-            User::LeaveIfError(_host->DisplayInfo(&displayInfo));
-            _screenRect = displayInfo.iRect;
-            break;
-        }
-        case EScreensaverEventStopping:
-        {
-            StopSensor();
             break;
         }
     }
