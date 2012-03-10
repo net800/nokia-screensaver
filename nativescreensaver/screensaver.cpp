@@ -163,6 +163,7 @@ void CScreenSaver::DataError(CSensrvChannel &aChannel, TSensrvErrorSeverity aErr
         _isListening = false;
         delete _proximitySensor;
         _proximitySensor = NULL;
+        SetVisible(ETrue);
     }
 }
 
@@ -249,7 +250,7 @@ TInt CScreenSaver::Draw(CWindowGc& gc)
     TTime now; now.HomeTime();
 
     TBuf<20> timeString;
-    _LIT(KTimeFormat,"%:0%H%:1%T");
+    _LIT(KTimeFormat,"%:0%J%:1%T");
     //_LIT(KTimeFormat,"%:0%H%:1%T%:2%S.%*C3%:3");
     now.FormatL(timeString, KTimeFormat);
 
