@@ -34,7 +34,7 @@ private:
     void StopSensor();
 
 private: // Data
-    TRect _screenRect;
+    TSize _screenRect;
     TBool _isVisible;
     TBool _isListening;
     MScreensaverPluginHost *_host;

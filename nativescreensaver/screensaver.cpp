@@ -81,7 +81,6 @@ CScreenSaver::CScreenSaver()
     spec.iHeight = 40 * KTwipsPerPoint;
     spec.iFontStyle.SetStrokeWeight(EStrokeWeightBold);
     spec.iFontStyle.SetEffects(FontEffect::EOutline, ETrue);
-
     sd->GetNearestFontToDesignHeightInTwips(_timeFont, spec);
 }
 
@@ -179,15 +178,15 @@ void CScreenSaver::DrawIndicators(CWindowGc& gc, TInt x, TInt y)
 
     TInt fullWidth = 0;
     TIndicatorPayload payload;
-    if ((_host->GetIndicatorPayload(EScreensaverIndicatorIndexNewMessages, payload) == KErrNone)
-            /*&& payload.iIsDisplayed > 0*/ && payload.iInteger > 0)
+    if (_host->GetIndicatorPayload(EScreensaverIndicatorIndexNewMessages, payload) == KErrNone
+            /*&& payload.iIsDisplayed*/ && payload.iInteger > 0)
     {
         nMessages.AppendNum(payload.iInteger);
         fullWidth += _notifyFont->TextWidthInPixels(nMessages) + KIconWidth + KSpace;
     }
 
-    if ((_host->GetIndicatorPayload(EScreensaverIndicatorIndexNewMissedCalls, payload) == KErrNone)
-            /*&& payload.iIsDisplayed > 0*/ && payload.iInteger > 0)
+    if (_host->GetIndicatorPayload(EScreensaverIndicatorIndexNewMissedCalls, payload) == KErrNone
+            /*&& payload.iIsDisplayed*/ && payload.iInteger > 0)
     {
         nMissedCalls.AppendNum(payload.iInteger);
         fullWidth += _notifyFont->TextWidthInPixels(nMissedCalls) + KIconWidth + KSpace;
@@ -196,7 +195,7 @@ void CScreenSaver::DrawIndicators(CWindowGc& gc, TInt x, TInt y)
     if (nMessages.Length() * nMissedCalls.Length() > 0)
         fullWidth += KGap;
 
-    x = (_screenRect.Width() - fullWidth)/2;
+    x = (_screenRect.iWidth - fullWidth)/2;
 
     gc.UseFont(_notifyFont);
 
@@ -206,7 +205,6 @@ void CScreenSaver::DrawIndicators(CWindowGc& gc, TInt x, TInt y)
         x += _notifyFont->TextWidthInPixels(nMessages) + KSpace;
 
         //CFbsBitmap* bmp = msg.iIcon->Bitmap();
-        //gc.DrawBitmap(TPoint(10, 100), bmp);
 
         gc.DrawRect(TRect(TPoint(x, y), TSize(KIconWidth, KIconHeight)));
         gc.DrawLine(TPoint(x, y), TPoint(x + KIconWidth/2, y + KIconHeight/2));
@@ -222,7 +220,6 @@ void CScreenSaver::DrawIndicators(CWindowGc& gc, TInt x, TInt y)
         x += _notifyFont->TextWidthInPixels(nMissedCalls) + KSpace;
 
         //CFbsBitmap* bmp = msg.iIcon->Bitmap();
-        //gc.BitBlt(TPoint(10, 100), bmp);
 
         const int KPenSize = 2;
         gc.SetPenSize(TSize(KPenSize, KPenSize));
@@ -251,18 +248,22 @@ TInt CScreenSaver::Draw(CWindowGc& gc)
 
     TBuf<20> timeString;
     _LIT(KTimeFormat,"%:0%J%:1%T");
-    //_LIT(KTimeFormat,"%:0%H%:1%T%:2%S.%*C3%:3");
     now.FormatL(timeString, KTimeFormat);
-
-    TInt xPos = (_screenRect.Width() - _timeFont->TextWidthInPixels(timeString)) / 2;
-    TInt yPos = ((now.DateTime().Hour()*60. + now.DateTime().Minute())/1439)
-            * (_screenRect.Height() / 2 - KTopMargin - KBottomMargin) + _timeFont->AscentInPixels() + KTopMargin;
+    TInt timeWidth = _timeFont->TextWidthInPixels(timeString);
+    TInt xPos = (_screenRect.iWidth - timeWidth) / 2;
+    TInt yPos = KTopMargin + ((now.DateTime().Hour()*60. + now.DateTime().Minute())/1439)
+            * (_screenRect.iHeight / 2 - KTopMargin - KBottomMargin) + _timeFont->AscentInPixels();
 
     TBuf<20> dateString;
     _LIT(KDateFormat,"%*E %/0%1%/1%2%/2%3%/3");
     now.FormatL(dateString, KDateFormat);
-    TInt xPosDate = (_screenRect.Width() - _dateFont->TextWidthInPixels(dateString)) / 2;
+    TInt xPosDate = (_screenRect.iWidth - _dateFont->TextWidthInPixels(dateString)) / 2;
     TInt yPosDate = yPos + _dateFont->AscentInPixels() + KTimeDateGap;
+
+    TBuf<5> ampm;
+    _LIT(KAMPMFormat, "%B");
+    now.FormatL(ampm, KAMPMFormat);
+    //xPos -= _dateFont->TextWidthInPixels(ampm)/2;
 
     gc.UseFont(_timeFont);
     for (int i = 0; i < 2; i++) //magic
@@ -271,6 +272,10 @@ TInt CScreenSaver::Draw(CWindowGc& gc)
     }
 
     gc.UseFont(_dateFont);
+
+    if (ampm.Length() > 0)
+        gc.DrawText(ampm, TPoint(xPos + timeWidth, yPos));
+
     gc.DrawText(dateString, TPoint(xPosDate, yPosDate));
 
     DrawIndicators(gc, xPosDate, yPosDate + 14);
@@ -333,9 +338,9 @@ TInt CScreenSaver::HandleScreensaverEventL(TScreensaverEvent event, TAny* /*aDat
             partial.iType = EPartialModeTypeMostPowerSaving;
             partial.iBpp = 0;
 
-            TInt height = CEikonEnv::Static()->ScreenDevice()->SizeInPixels().iHeight;
-            TInt width = CEikonEnv::Static()->ScreenDevice()->SizeInPixels().iWidth;
-            _host->SetActiveDisplayArea(KTopMargin, Max(width, height) - 1, partial);
+            _screenRect.iHeight = CEikonEnv::Static()->ScreenDevice()->SizeInPixels().iHeight;
+            _screenRect.iWidth = CEikonEnv::Static()->ScreenDevice()->SizeInPixels().iWidth;
+            _host->SetActiveDisplayArea(KTopMargin, Max(_screenRect.iWidth, _screenRect.iHeight) - 1, partial);
 
             _host->RequestTimeout(KLightsOnTimeoutInterval);
             StartSensorL();
@@ -345,8 +350,8 @@ TInt CScreenSaver::HandleScreensaverEventL(TScreensaverEvent event, TAny* /*aDat
         {
             TScreensaverDisplayInfo displayInfo;
             displayInfo.iSize = sizeof(TScreensaverDisplayInfo);
-            User::LeaveIfError(_host->DisplayInfo(&displayInfo));
-            _screenRect = displayInfo.iRect;
+            if (_host->DisplayInfo(&displayInfo) == KErrNone)
+                _screenRect = displayInfo.iRect.Size();
             break;
         }
         case EScreensaverEventStopping:
