@@ -61,34 +61,22 @@ CSensrvChannel* CreateSensorL()
 CScreenSaver::CScreenSaver()
 {
     _proximitySensor = NULL;
+    _timeFont = NULL;
+    _dateFont = NULL;
+    _notifyFont = NULL;
+
     _isListening = false;
     _isVisible = true;
-
-    CWsScreenDevice* sd = CEikonEnv::Static()->ScreenDevice();
-
-    const CFont* baseFont = CEikonEnv::Static()->NormalFont();
-    TFontSpec spec = baseFont->FontSpecInTwips();
-
-    spec.iTypeface.iName = KFontName;
-
-    spec.iFontStyle.SetStrokeWeight(EStrokeWeightNormal);
-    spec.iHeight = 4 * KTwipsPerPoint;
-    sd->GetNearestFontToDesignHeightInTwips(_notifyFont, spec);
-
-    spec.iHeight = 8 * KTwipsPerPoint;
-    sd->GetNearestFontToDesignHeightInTwips(_dateFont, spec);
-
-    spec.iHeight = 40 * KTwipsPerPoint;
-    spec.iFontStyle.SetStrokeWeight(EStrokeWeightBold);
-    spec.iFontStyle.SetEffects(FontEffect::EOutline, ETrue);
-    sd->GetNearestFontToDesignHeightInTwips(_timeFont, spec);
 }
 
 CScreenSaver::~CScreenSaver()
 {
-    CEikonEnv::Static()->ScreenDevice()->ReleaseFont(_timeFont);
-    CEikonEnv::Static()->ScreenDevice()->ReleaseFont(_dateFont);
-    CEikonEnv::Static()->ScreenDevice()->ReleaseFont(_notifyFont);
+    if (_timeFont != NULL)
+        CEikonEnv::Static()->ScreenDevice()->ReleaseFont(_timeFont);
+    if (_dateFont != NULL)
+        CEikonEnv::Static()->ScreenDevice()->ReleaseFont(_dateFont);
+    if (_notifyFont != NULL)
+        CEikonEnv::Static()->ScreenDevice()->ReleaseFont(_notifyFont);
     delete _proximitySensor;
 }
 
@@ -109,16 +97,37 @@ CScreenSaver* CScreenSaver::NewL()
 
 void CScreenSaver::ConstructL()
 {
-    if (KUseSensor)
-        _proximitySensor = CreateSensorL();
-
-    SetOrientationL(KOrientation);
 }
 
 TInt CScreenSaver::InitializeL(MScreensaverPluginHost* aHost)
 {
+    //Init sensor
+    if (KUseSensor)
+        _proximitySensor = CreateSensorL();
+
+    SetOrientationL(KOrientation);
+
+    //Init fonts
+    CWsScreenDevice* sd = CEikonEnv::Static()->ScreenDevice();
+
+    const CFont* baseFont = CEikonEnv::Static()->NormalFont();
+    TFontSpec spec = baseFont->FontSpecInTwips();
+
+    spec.iTypeface.iName = KFontName;
+
+    spec.iFontStyle.SetStrokeWeight(EStrokeWeightNormal);
+    spec.iHeight = 4 * KTwipsPerPoint;
+    sd->GetNearestFontToDesignHeightInTwips(_notifyFont, spec);
+
+    spec.iHeight = 8 * KTwipsPerPoint;
+    sd->GetNearestFontToDesignHeightInTwips(_dateFont, spec);
+
+    spec.iHeight = 40 * KTwipsPerPoint;
+    spec.iFontStyle.SetStrokeWeight(EStrokeWeightBold);
+    spec.iFontStyle.SetEffects(FontEffect::EOutline, ETrue);
+    sd->GetNearestFontToDesignHeightInTwips(_timeFont, spec);
+
     _host = aHost;
-    _host->SetRefreshTimerValue(KOneSecond);
     _host->OverrideStandardIndicators();
     //iHost->UseStandardIndicators();
 
@@ -342,6 +351,7 @@ TInt CScreenSaver::HandleScreensaverEventL(TScreensaverEvent event, TAny* /*aDat
             _screenRect.iWidth = CEikonEnv::Static()->ScreenDevice()->SizeInPixels().iWidth;
             _host->SetActiveDisplayArea(KTopMargin, Max(_screenRect.iWidth, _screenRect.iHeight) - 1, partial);
 
+            _host->SetRefreshTimerValue(KOneSecond);
             _host->RequestTimeout(KLightsOnTimeoutInterval);
             StartSensorL();
             break;
