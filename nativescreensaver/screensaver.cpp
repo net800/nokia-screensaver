@@ -9,7 +9,6 @@
 
 #define SCREENSAVER_EXTRA_FEATURES
 
-const TInt KLightsOnTimeoutInterval = 30*60 + 30;//30.5 min
 const TInt KOneSecond = 1000000;
 
 const TInt KTopMargin = 20;
@@ -332,13 +331,6 @@ TInt CScreenSaver::HandleScreensaverEventL(TScreensaverEvent event, TAny* /*aDat
     TInt err(KErrNone);
     switch (event)
     {
-        case EScreensaverEventTimeout:
-        {
-            _host->RequestTimeout(KLightsOnTimeoutInterval);
-
-            UpdateRefreshTimer();
-            break;
-        }
         case EScreensaverEventStarting:
         {
             _isVisible = true;
@@ -352,7 +344,7 @@ TInt CScreenSaver::HandleScreensaverEventL(TScreensaverEvent event, TAny* /*aDat
             _host->SetActiveDisplayArea(KTopMargin, Max(_screenRect.iWidth, _screenRect.iHeight) - 1, partial);
 
             _host->SetRefreshTimerValue(KOneSecond);
-            _host->RequestTimeout(KLightsOnTimeoutInterval);
+            _host->RequestTimeout(0);
             StartSensorL();
             break;
         }
