@@ -3,28 +3,23 @@
 #include <sensrvchannel.h>
 #include <sensrvproximitysensor.h>
 #include <AknAppUi.h>
+#include <s32file.h>
+#include <f32file.h>
 
 #include "screensaver.h"
 #include "screensaver.hrh"
-
-#define SCREENSAVER_EXTRA_FEATURES
 
 const TInt KOneSecond = 1000000;
 
 const TInt KTopMargin = 20;
 const TInt KBottomMargin = 20;
 const TInt KTimeDateGap = 40;
+_LIT(KConfigPath, "c:\\data\\annascreensaver.cfg");
 _LIT(KFontName, "Nokia Sans S60");
 
-#ifdef SCREENSAVER_EXTRA_FEATURES
 const TBool KUseSensor = true; //Beware: on AMOLED-screen devices proximity sensor might consume more power than the sceeen!
 _LIT(KSaverName, "Anna Screensaver+");
-const CAknAppUi::TAppUiOrientation KOrientation = CAknAppUi::EAppUiOrientationAutomatic;
-#else
-const TBool KUseSensor = false;
-_LIT(KSaverName, "Anna Screensaver");
-const CAknAppUi::TAppUiOrientation KOrientation = CAknAppUi::EAppUiOrientationPortrait;
-#endif
+const CAknAppUi::TAppUiOrientation KDefaultOrientation = CAknAppUi::EAppUiOrientationAutomatic;
 
 void SetOrientationL(CAknAppUi::TAppUiOrientation orientation)
 {
@@ -66,6 +61,7 @@ CScreenSaver::CScreenSaver()
 
     _isListening = false;
     _isVisible = true;
+    _screenOrientation = KDefaultOrientation;
 }
 
 CScreenSaver::~CScreenSaver()
@@ -94,8 +90,39 @@ CScreenSaver* CScreenSaver::NewL()
     return self;
 }
 
+void CScreenSaver::SaveSettingsL()
+{
+    RFs& fileServer = CCoeEnv::Static()->FsSession();
+    RFileWriteStream writeStream;
+    TInt err = writeStream.Replace(fileServer, KConfigPath, EFileWrite);
+
+    if (err == KErrNone)
+    {
+        writeStream.PushL();
+
+        writeStream.WriteInt8L(_screenOrientation);
+
+        writeStream.CommitL();
+        CleanupStack::PopAndDestroy(&writeStream);
+    }
+}
+
+void CScreenSaver::LoadSettingsL()
+{
+    RFs& fileServer = CCoeEnv::Static()->FsSession();
+    RFileReadStream readStream;
+    TInt err = readStream.Open(fileServer, KConfigPath, EFileRead);
+    CleanupClosePushL(readStream);
+    if (err == KErrNone)
+    {
+        readStream >> _screenOrientation;
+    }
+    CleanupStack::PopAndDestroy(&readStream);
+}
+
 void CScreenSaver::ConstructL()
 {
+    LoadSettingsL();
 }
 
 TInt CScreenSaver::InitializeL(MScreensaverPluginHost* aHost)
@@ -104,7 +131,7 @@ TInt CScreenSaver::InitializeL(MScreensaverPluginHost* aHost)
     if (KUseSensor)
         _proximitySensor = CreateSensorL();
 
-    SetOrientationL(KOrientation);
+    TRAP_IGNORE(SetOrientationL(static_cast<CAknAppUi::TAppUiOrientation>(_screenOrientation)));
 
     //Init fonts
     CWsScreenDevice* sd = CEikonEnv::Static()->ScreenDevice();
@@ -333,7 +360,7 @@ const TDesC16& CScreenSaver::Name() const
     return KSaverName;
 }
 
-TInt CScreenSaver::HandleScreensaverEventL(TScreensaverEvent event, TAny* /*aData*/)
+TInt CScreenSaver::HandleScreensaverEventL(TScreensaverEvent event, TAny*)
 {
     TInt err(KErrNone);
     switch (event)
@@ -369,6 +396,23 @@ TInt CScreenSaver::HandleScreensaverEventL(TScreensaverEvent event, TAny* /*aDat
             break;
         }
     }
-
     return err;
 }
+
+TInt CScreenSaver::PluginFunction(TScPluginCaps caps, TAny*)
+{
+    TInt err = KErrNone;
+    if (caps == EScpCapsConfigure) {
+        if(CEikonEnv::Static()->QueryWinL(_L("Allow landscape orientation?"), _L("")))
+        {
+            _screenOrientation = CAknAppUi::EAppUiOrientationAutomatic;
+        }
+        else
+        {
+            _screenOrientation = CAknAppUi::EAppUiOrientationPortrait;
+        }
+        TRAPD(err, SaveSettingsL());
+    }
+    return err;
+}
+

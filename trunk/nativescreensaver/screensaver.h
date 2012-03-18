@@ -17,8 +17,8 @@ public: //MScreensaverPlugin
     virtual TInt Draw(CWindowGc& aGc);
     virtual const TDesC16& Name() const;
     virtual TInt HandleScreensaverEventL(TScreensaverEvent aEvent, TAny* aData);
-    virtual TInt Capabilities() { return EScpCapsNone; }
-    virtual TInt PluginFunction(TScPluginCaps /*aFunction*/, TAny* /*aParam*/) { return KErrNone; }
+    virtual TInt Capabilities() { return EScpCapsConfigure; }
+    virtual TInt PluginFunction(TScPluginCaps /*aFunction*/, TAny* /*aParam*/);
 
 public: //MSensrvDataListener
     void DataReceived(CSensrvChannel &aChannel, TInt aCount, TInt aDataLost);
@@ -32,6 +32,8 @@ private:
     void UpdateRefreshTimer();
     void StartSensorL();
     void StopSensor();
+    void SaveSettingsL();
+    void LoadSettingsL();
 
 private: // Data
     TSize _screenRect;
@@ -42,6 +44,7 @@ private: // Data
     CFont* _timeFont;
     CFont* _dateFont;
     CFont* _notifyFont;
+    TInt8 _screenOrientation;
 };
 
 #endif
