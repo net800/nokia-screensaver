@@ -165,11 +165,18 @@ void CScreenSaver::DataReceived(CSensrvChannel &aChannel, TInt /*aCount*/, TInt 
 
 void CScreenSaver::DataError(CSensrvChannel &aChannel, TSensrvErrorSeverity aError)
 {
-    if (&aChannel == _proximitySensor && aError == ESensrvErrorSeverityFatal)
+    if (&aChannel == _proximitySensor)
     {
-        _isListening = false;
-        delete _proximitySensor;
-        _proximitySensor = NULL;
+        if (aError == ESensrvErrorSeverityFatal)
+        {
+            _isListening = false;
+            delete _proximitySensor;
+            _proximitySensor = NULL;
+        }
+        else
+        {
+            StopSensor();
+        }
         SetVisible(ETrue);
     }
 }
@@ -206,7 +213,7 @@ void CScreenSaver::DrawIndicators(CWindowGc& gc, TInt x, TInt y)
     x = (_screenRect.iWidth - fullWidth)/2;
 
     gc.UseFont(_notifyFont);
-
+    //gc.SetPenColor(KRgbRed);
     if (nMessages.Length() > 0)
     {
         gc.DrawText(nMessages, TPoint(x, y + _notifyFont->AscentInPixels()));
