@@ -25,8 +25,7 @@ symbian: {
 
     MMP_RULES += pluginrsc
 
-    LIBS += -lecom -lcone -lgdi -lSensrvClient -lsensrvutil -lavkon -leiksrv -leikcore -lefsrv -lestor
-    # -lapgrfx
+    LIBS += -lecom -lcone -lgdi
 
     TARGET.UID2 = 0x10009D8D
     TARGET.UID3 = 0x20060C5D # SCREENSAVER_UID3
