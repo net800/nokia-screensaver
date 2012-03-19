@@ -148,10 +148,13 @@ TInt CScreenSaver::InitializeL(MScreensaverPluginHost* aHost)
     spec.iHeight = 8 * KTwipsPerPoint;
     sd->GetNearestFontToDesignHeightInTwips(_dateFont, spec);
 
-    spec.iHeight = 40 * KTwipsPerPoint;
     spec.iFontStyle.SetStrokeWeight(EStrokeWeightBold);
     spec.iFontStyle.SetEffects(FontEffect::EOutline, ETrue);
-    sd->GetNearestFontToDesignHeightInTwips(_timeFont, spec);
+    //spec.iHeight = 40 * KTwipsPerPoint;
+    //sd->GetNearestFontToDesignHeightInTwips(_timeFont, spec);
+    //_timeFont->TextWidthInPixels("00:00") = 290 on 3.5
+    spec.iHeight = 117;//pixels = 40pt on 3.5 inch display
+    sd->GetNearestFontToDesignHeightInPixels(_timeFont, spec);
 
     _host = aHost;
     _host->OverrideStandardIndicators();
@@ -289,7 +292,7 @@ TInt CScreenSaver::Draw(CWindowGc& gc)
     TTime now; now.HomeTime();
 
     TBuf<20> timeString;
-    _LIT(KTimeFormat,"%:0%J%:1%T");
+    _LIT(KTimeFormat, "%:0%J%:1%T");
     now.FormatL(timeString, KTimeFormat);
     TInt timeWidth = _timeFont->TextWidthInPixels(timeString);
     TInt xPos = (_screenRect.iWidth - timeWidth) / 2;
@@ -297,8 +300,9 @@ TInt CScreenSaver::Draw(CWindowGc& gc)
             * (_screenRect.iHeight / 2 - KTopMargin - KBottomMargin) + _timeFont->AscentInPixels();
 
     TBuf<20> dateString;
-    _LIT(KDateFormat,"%*E %/0%1%/1%2%/2%3%/3");
+    _LIT(KDateFormat, "%*E %/0%1%/1%2%/2%3%/3");
     now.FormatL(dateString, KDateFormat);
+
     TInt xPosDate = (_screenRect.iWidth - _dateFont->TextWidthInPixels(dateString)) / 2;
     TInt yPosDate = yPos + _dateFont->AscentInPixels() + KTimeDateGap;
 
@@ -314,9 +318,8 @@ TInt CScreenSaver::Draw(CWindowGc& gc)
     }
 
     gc.UseFont(_dateFont);
-
     if (ampm.Length() > 0)
-        gc.DrawText(ampm, TPoint(xPos + timeWidth, yPos));
+        gc.DrawText(ampm, TPoint(xPos + timeWidth - _dateFont->WidthZeroInPixels(), yPos + _dateFont->HeightInPixels()));
 
     gc.DrawText(dateString, TPoint(xPosDate, yPosDate));
 
@@ -402,7 +405,8 @@ TInt CScreenSaver::HandleScreensaverEventL(TScreensaverEvent event, TAny*)
 TInt CScreenSaver::PluginFunction(TScPluginCaps caps, TAny*)
 {
     TInt err = KErrNone;
-    if (caps == EScpCapsConfigure) {
+    if (caps == EScpCapsConfigure)
+    {
         if(CEikonEnv::Static()->QueryWinL(_L("Allow landscape orientation?"), _L("")))
         {
             _screenOrientation = CAknAppUi::EAppUiOrientationAutomatic;
