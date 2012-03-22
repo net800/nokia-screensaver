@@ -14,6 +14,8 @@ const TInt KOneSecond = 1000000;
 const TInt KTopMargin = 20;
 const TInt KBottomMargin = 20;
 const TInt KTimeDateGap = 40;
+const TInt KIconWidth = 16;
+const TInt KIconHeight = 12;
 _LIT(KConfigPath, "c:\\data\\annascreensaver.cfg");
 _LIT(KFontName, "Nokia Sans S60");
 
@@ -44,6 +46,7 @@ CSensrvChannel* CreateSensorL()
     {
         TSensrvChannelInfo inf = channelInfoList[0];
         result = CSensrvChannel::NewL(inf);
+        result->OpenChannelL();
     }
 
     CleanupStack::PopAndDestroy();
@@ -72,7 +75,11 @@ CScreenSaver::~CScreenSaver()
         CEikonEnv::Static()->ScreenDevice()->ReleaseFont(_dateFont);
     if (_notifyFont != NULL)
         CEikonEnv::Static()->ScreenDevice()->ReleaseFont(_notifyFont);
-    delete _proximitySensor;
+    if (_proximitySensor != NULL)
+    {
+        _proximitySensor->CloseChannel();
+        delete _proximitySensor;
+    }
 }
 
 CScreenSaver* CScreenSaver::NewLC()
@@ -122,14 +129,21 @@ void CScreenSaver::LoadSettingsL()
 
 void CScreenSaver::ConstructL()
 {
-    LoadSettingsL();
+    TRAP_IGNORE(LoadSettingsL());
+}
+
+void CScreenSaver::InitSensorL()
+{
+    _proximitySensor = CreateSensorL();
 }
 
 TInt CScreenSaver::InitializeL(MScreensaverPluginHost* aHost)
 {
     //Init sensor
     if (KUseSensor)
-        _proximitySensor = CreateSensorL();
+    {
+        TRAP_IGNORE(InitSensorL());
+    }
 
     TRAP_IGNORE(SetOrientationL(static_cast<CAknAppUi::TAppUiOrientation>(_screenOrientation)));
 
@@ -142,7 +156,8 @@ TInt CScreenSaver::InitializeL(MScreensaverPluginHost* aHost)
     spec.iTypeface.iName = KFontName;
 
     spec.iFontStyle.SetStrokeWeight(EStrokeWeightNormal);
-    spec.iHeight = 4 * KTwipsPerPoint;
+
+    spec.iHeight = 5 * KTwipsPerPoint;
     sd->GetNearestFontToDesignHeightInTwips(_notifyFont, spec);
 
     spec.iHeight = 8 * KTwipsPerPoint;
@@ -150,15 +165,14 @@ TInt CScreenSaver::InitializeL(MScreensaverPluginHost* aHost)
 
     spec.iFontStyle.SetStrokeWeight(EStrokeWeightBold);
     spec.iFontStyle.SetEffects(FontEffect::EOutline, ETrue);
-    //spec.iHeight = 40 * KTwipsPerPoint;
-    //sd->GetNearestFontToDesignHeightInTwips(_timeFont, spec);
+
     //_timeFont->TextWidthInPixels("00:00") = 290 on 3.5
     spec.iHeight = 117;//pixels = 40pt on 3.5 inch display
     sd->GetNearestFontToDesignHeightInPixels(_timeFont, spec);
 
     _host = aHost;
+    _host->SetRefreshTimerValue(KOneSecond);
     _host->OverrideStandardIndicators();
-    //iHost->UseStandardIndicators();
 
     return KErrNone;
 }
@@ -213,8 +227,6 @@ void CScreenSaver::DataError(CSensrvChannel &aChannel, TSensrvErrorSeverity aErr
 
 void CScreenSaver::DrawIndicators(CWindowGc& gc, TInt x, TInt y)
 {
-    const TInt KIconWidth = 14;
-    const TInt KIconHeight = 10;
     const TInt KGap = 10;
     const TInt KSpace = 5;
 
@@ -253,7 +265,7 @@ void CScreenSaver::DrawIndicators(CWindowGc& gc, TInt x, TInt y)
 
         gc.DrawRect(TRect(TPoint(x, y), TSize(KIconWidth, KIconHeight)));
         gc.DrawLine(TPoint(x, y), TPoint(x + KIconWidth/2, y + KIconHeight/2));
-        gc.DrawLineTo(TPoint(x + KIconWidth, y));
+        gc.DrawLineTo(TPoint(x + KIconWidth - 1, y));
         x += KIconWidth;
 
         x += KGap;
@@ -335,8 +347,7 @@ void CScreenSaver::StartSensorL()
 {
     if (!_isListening && _proximitySensor != NULL)
     {
-        _proximitySensor->OpenChannelL();
-        _proximitySensor->StartDataListeningL(this, 1, 0, 0);
+        _proximitySensor->StartDataListeningL(this, 1, 1, 0);
         _isListening = ETrue;
     }
 }
@@ -346,7 +357,6 @@ void CScreenSaver::StopSensor()
     if (_isListening && _proximitySensor != NULL)
     {
         _proximitySensor->StopDataListening();
-        _proximitySensor->CloseChannel();
         _isListening = false;
     }
 }
@@ -380,7 +390,6 @@ TInt CScreenSaver::HandleScreensaverEventL(TScreensaverEvent event, TAny*)
             _screenRect.iWidth = CEikonEnv::Static()->ScreenDevice()->SizeInPixels().iWidth;
             _host->SetActiveDisplayArea(KTopMargin, Max(_screenRect.iWidth, _screenRect.iHeight) - 1, partial);
 
-            _host->SetRefreshTimerValue(KOneSecond);
             _host->RequestTimeout(0);
             StartSensorL();
             break;
@@ -415,6 +424,7 @@ TInt CScreenSaver::PluginFunction(TScPluginCaps caps, TAny*)
         {
             _screenOrientation = CAknAppUi::EAppUiOrientationPortrait;
         }
+
         TRAPD(err, SaveSettingsL());
     }
     return err;
