@@ -28,6 +28,7 @@ public: //MSensrvDataListener
 private:
     CScreenSaver();
     void ConstructL();
+    void InitSensorL();
     void DrawIndicators(CWindowGc& gc, TInt x, TInt y);
     void UpdateRefreshTimer();
     void StartSensorL();
