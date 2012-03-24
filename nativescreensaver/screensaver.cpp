@@ -75,11 +75,9 @@ CScreenSaver::~CScreenSaver()
         CEikonEnv::Static()->ScreenDevice()->ReleaseFont(_dateFont);
     if (_notifyFont != NULL)
         CEikonEnv::Static()->ScreenDevice()->ReleaseFont(_notifyFont);
+
     if (_proximitySensor != NULL)
-    {
-        _proximitySensor->CloseChannel();
         delete _proximitySensor;
-    }
 }
 
 CScreenSaver* CScreenSaver::NewLC()
@@ -139,12 +137,6 @@ void CScreenSaver::InitSensorL()
 
 TInt CScreenSaver::InitializeL(MScreensaverPluginHost* aHost)
 {
-    //Init sensor
-    if (KUseSensor)
-    {
-        TRAP_IGNORE(InitSensorL());
-    }
-
     TRAP_IGNORE(SetOrientationL(static_cast<CAknAppUi::TAppUiOrientation>(_screenOrientation)));
 
     //Init fonts
@@ -380,6 +372,11 @@ TInt CScreenSaver::HandleScreensaverEventL(TScreensaverEvent event, TAny*)
     {
         case EScreensaverEventStarting:
         {
+            if (KUseSensor)
+            {
+                TRAP_IGNORE(InitSensorL());
+            }
+
             _isVisible = true;
 
             TScreensaverPartialMode partial;
@@ -405,6 +402,9 @@ TInt CScreenSaver::HandleScreensaverEventL(TScreensaverEvent event, TAny*)
         case EScreensaverEventStopping:
         {
             StopSensor();
+            if (_proximitySensor != NULL)
+                _proximitySensor->CloseChannel();
+
             break;
         }
     }
