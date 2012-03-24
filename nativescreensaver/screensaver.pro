@@ -2,7 +2,7 @@ QT       -= gui core
 
 TARGET = annascreensaver
 TEMPLATE = lib
-VERSION = 1.1.1
+VERSION = 1.2.0
 
 symbian: {
     INCLUDEPATH += $${EPOCROOT}epoc32/include/mw \
