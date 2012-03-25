@@ -29,7 +29,8 @@ private:
     CScreenSaver();
     void ConstructL();
     void InitSensorL();
-    void DrawIndicators(CWindowGc& gc, TInt x, TInt y);
+    TInt DrawClock(CWindowGc& gc);
+    void DrawIndicators(CWindowGc& gc, TInt y);
     void UpdateRefreshTimer();
     void StartSensorL();
     void StopSensor();

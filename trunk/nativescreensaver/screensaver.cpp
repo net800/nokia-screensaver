@@ -76,8 +76,7 @@ CScreenSaver::~CScreenSaver()
     if (_notifyFont != NULL)
         CEikonEnv::Static()->ScreenDevice()->ReleaseFont(_notifyFont);
 
-    if (_proximitySensor != NULL)
-        delete _proximitySensor;
+    delete _proximitySensor;
 }
 
 CScreenSaver* CScreenSaver::NewLC()
@@ -217,7 +216,7 @@ void CScreenSaver::DataError(CSensrvChannel &aChannel, TSensrvErrorSeverity aErr
     }
 }
 
-void CScreenSaver::DrawIndicators(CWindowGc& gc, TInt x, TInt y)
+void CScreenSaver::DrawIndicators(CWindowGc& gc, TInt y)
 {
     const TInt KGap = 10;
     const TInt KSpace = 5;
@@ -244,7 +243,7 @@ void CScreenSaver::DrawIndicators(CWindowGc& gc, TInt x, TInt y)
     if (nMessages.Length() * nMissedCalls.Length() > 0)
         fullWidth += KGap;
 
-    x = (_screenRect.iWidth - fullWidth)/2;
+    TInt x = (_screenRect.iWidth - fullWidth)/2;
 
     gc.UseFont(_notifyFont);
     //gc.SetPenColor(KRgbRed);
@@ -280,14 +279,8 @@ void CScreenSaver::DrawIndicators(CWindowGc& gc, TInt x, TInt y)
     }
 }
 
-TInt CScreenSaver::Draw(CWindowGc& gc)
+TInt CScreenSaver::DrawClock(CWindowGc &gc)
 {
-    gc.Clear();
-    if (!_isVisible)
-    {
-        _host->SetRefreshTimerValue(0); //disable timer
-        return KErrNone;
-    }
     gc.SetBrushStyle(CGraphicsContext::ESolidBrush);
     gc.SetPenStyle(CGraphicsContext::ESolidPen);
 
@@ -327,7 +320,20 @@ TInt CScreenSaver::Draw(CWindowGc& gc)
 
     gc.DrawText(dateString, TPoint(xPosDate, yPosDate));
 
-    DrawIndicators(gc, xPosDate, yPosDate + 14);
+    return yPosDate;
+}
+
+TInt CScreenSaver::Draw(CWindowGc& gc)
+{
+    gc.Clear();
+    if (!_isVisible)
+    {
+        _host->SetRefreshTimerValue(0); //disable timer
+        return KErrNone;
+    }
+
+    TInt yPosDate = DrawClock(gc);
+    DrawIndicators(gc, yPosDate + 14);
 
     UpdateRefreshTimer();
     TRAPD(err, StartSensorL());
@@ -429,4 +435,3 @@ TInt CScreenSaver::PluginFunction(TScPluginCaps caps, TAny*)
     }
     return err;
 }
-
