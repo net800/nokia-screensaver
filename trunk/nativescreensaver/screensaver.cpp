@@ -69,6 +69,8 @@ CScreenSaver::CScreenSaver()
 
 CScreenSaver::~CScreenSaver()
 {
+    if (_proximitySensor != NULL)
+        _proximitySensor->CloseChannel();
     if (_timeFont != NULL)
         CEikonEnv::Static()->ScreenDevice()->ReleaseFont(_timeFont);
     if (_dateFont != NULL)
@@ -131,7 +133,8 @@ void CScreenSaver::ConstructL()
 
 void CScreenSaver::InitSensorL()
 {
-    _proximitySensor = CreateSensorL();
+    if (_proximitySensor == NULL)
+        _proximitySensor = CreateSensorL();
 }
 
 TInt CScreenSaver::InitializeL(MScreensaverPluginHost* aHost)
@@ -408,8 +411,6 @@ TInt CScreenSaver::HandleScreensaverEventL(TScreensaverEvent event, TAny*)
         case EScreensaverEventStopping:
         {
             StopSensor();
-            if (_proximitySensor != NULL)
-                _proximitySensor->CloseChannel();
 
             break;
         }
