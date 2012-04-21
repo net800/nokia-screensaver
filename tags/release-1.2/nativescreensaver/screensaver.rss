@@ -1,0 +1,27 @@
+#include <ecom/RegistryInfo.rh>
+#include <screensaverpluginintdef.hrh>
+
+#include "screensaver.hrh"
+
+RESOURCE REGISTRY_INFO theInfo
+{
+  dll_uid = SCREENSAVER_UID3; // unique dll UID
+  interfaces =
+  {
+     INTERFACE_INFO
+     {
+        interface_uid = KCScreensaverPluginInterfaceDefinitionUid;
+        implementations =
+        {
+           IMPLEMENTATION_INFO
+           {
+              implementation_uid = SCREENSAVER_UID3; // unique dll UID
+              version_no = 1;
+              display_name = "Anna screensaver";
+              default_data = "";
+              opaque_data = "01";
+           }
+        };
+      }
+  };
+}
